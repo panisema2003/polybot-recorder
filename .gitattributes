@@ -1,0 +1,9 @@
+# Normalise line endings: store LF in the repo, check out LF everywhere.
+# Critical for files consumed on Linux (e.g. the systemd unit, shell snippets).
+* text=auto eol=lf
+
+# Binaries that must never be line-ending converted.
+*.png binary
+*.db binary
+*.sqlite binary
+*.parquet binary

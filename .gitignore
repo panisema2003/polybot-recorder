@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Env & secrets (NEVER commit wallet keys / API creds) — repo is PUBLIC
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+credentials*
+
+# Data captured at runtime
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.parquet
+*.log
+
+# Analysis output (charts)
+reports/
+*.png
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

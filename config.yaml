@@ -1,0 +1,68 @@
+# polybot configuration — Phase 1 (read-only research & data capture)
+# Everything here is safe to edit by hand. No secrets live in this file.
+
+api:
+  gamma_base: "https://gamma-api.polymarket.com"
+  clob_base: "https://clob.polymarket.com"
+  ws_market_url: "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+  # Be a polite client: cap concurrency and request rate.
+  max_concurrency: 8
+  request_timeout_s: 20.0
+
+storage:
+  db_path: "data/polybot.db"
+
+# --- Niche-market discovery ---
+# The goal is NOT "markets about Colombia". It is markets that are:
+#   - thematically in our circle of competence (we may know more than the crowd),
+#   - liquid enough to actually enter/exit,
+#   - low enough volume that fast bots aren't camping them,
+#   - wide enough spread to suggest pricing slack,
+#   - resolving soon-ish so capital isn't locked for months.
+discovery:
+  # Pull this many active markets from Gamma before scoring (paginated).
+  # Gamma hard-caps `limit` at 100 per request, so page_size is pinned at 100;
+  # scan_limit drives how deep we page. Markets are sorted by 24h volume desc,
+  # and our low-attention band (<75k) only begins ~offset 300 and runs past
+  # ~3500, so we page deep to actually reach the niche long tail.
+  scan_limit: 4000
+  page_size: 100
+
+  # Hard filters — a market is dropped if it fails any of these.
+  filters:
+    require_order_book: true        # must be CLOB-tradeable
+    min_liquidity: 2000.0           # USD resting liquidity; need to get in/out
+    max_days_to_resolution: 120     # cap capital lock-up
+    min_days_to_resolution: 1       # skip about-to-resolve noise
+    # Volume band: we WANT low-attention markets, but not totally dead ones.
+    min_volume_24h: 50.0
+    max_volume_24h: 75000.0         # above this, assume bot-saturated
+
+  # Soft scoring weights (higher score = more interesting). Tuned, not sacred.
+  weights:
+    theme_match: 3.0                # in our circle of competence
+    spread: 2.5                     # wider live spread => more slack to capture
+    liquidity: 1.0                  # log-scaled; enough to trade
+    low_attention: 2.0             # inverse of volume; fewer bots
+    time_decay: 1.0                 # prefer nearer resolution
+
+  # Themes we plausibly understand better than the average trader.
+  # Keywords are matched on whole-word boundaries against question+description.
+  # A trailing '*' means "prefix stem": e.g. peru* -> peru/peruvian,
+  # bogot* -> bogota/bogotá. Plain words match exactly, so 'petro' will NOT
+  # match 'petroleum' and 'cali' will NOT match 'california'.
+  themes:
+    colombia: ["colombia*", "petro", "bogot*", "medell*", "cali", "barranquilla",
+               "farc", "eln"]
+    latam: ["argentin*", "milei", "brazil*", "lula", "mexic*", "sheinbaum",
+            "venezuel*", "maduro", "chile*", "peru*", "boric", "latin america"]
+    latam_football: ["copa libertadores", "copa america", "conmebol", "liga mx"]
+    crypto_micro: ["fdv", "airdrop", "token launch", "listing", "mainnet"]
+
+recorder:
+  # Periodic REST snapshot interval (belt-and-suspenders vs the WS stream).
+  rest_snapshot_interval_s: 30
+  # Send an app-level keepalive on the WS this often.
+  ws_ping_interval_s: 10
+  # Reconnect backoff (seconds): min, max.
+  reconnect_backoff_s: [1.0, 30.0]

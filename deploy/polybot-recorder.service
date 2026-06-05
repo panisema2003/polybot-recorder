@@ -1,0 +1,37 @@
+[Unit]
+# polybot order-book recorder — long-running data capture for Phase 1.
+# Install: see deploy/README.md. Edit the CAPITALISED placeholders below.
+Description=polybot Polymarket order-book recorder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=polybot
+WorkingDirectory=/opt/polybot/app
+
+# Use the venv's python directly (no activation needed).
+# --discover-top 10 records the 10 top-ranked niche markets. Swap for explicit
+# --slug ... --slug ... if you want a fixed basket instead.
+ExecStart=/opt/polybot/app/.venv/bin/python -m polybot record --discover-top 10
+
+# Keep it alive across crashes, network blips, and reboots.
+Restart=always
+RestartSec=10
+# If it crash-loops, back off instead of hammering (systemd >= 240).
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+# Logs go to the journal: `journalctl -u polybot-recorder -f`
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=polybot
+
+# Light hardening (optional but cheap).
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/polybot/app/data
+
+[Install]
+WantedBy=multi-user.target
