@@ -17,9 +17,10 @@ from rich.table import Table
 
 from polybot.backtest import Backtester, FairValueStrategy, FillModel, synthetic_ticks
 from polybot.backtest.loader import load_ticks, resolve_asset
+from polybot.basket import read_basket
 from polybot.clients import ClobClient, GammaClient
 from polybot.config import Settings
-from polybot.discovery import discover
+from polybot.discovery import discover, filter_min_days_to_resolution
 from polybot.log import get_logger, setup_logging
 from polybot.models import Market
 from polybot.recorder import Recorder
@@ -96,6 +97,15 @@ async def cmd_book(settings: Settings, args: argparse.Namespace) -> None:
 
 async def cmd_record(settings: Settings, args: argparse.Namespace) -> None:
     markets: list[Market] = []
+    slugs: list[str] = list(args.slug)
+    if args.basket:
+        try:
+            slugs = read_basket(args.basket)
+        except OSError as exc:
+            console.print(f"[red]Could not read basket '{args.basket}': {exc}[/]")
+            return
+        console.print(f"[dim]Loaded {len(slugs)} slug(s) from {args.basket}[/]")
+
     async with GammaClient(settings.api) as gamma, ClobClient(settings.api) as clob:
         if args.discover_top:
             scored = await discover(
@@ -103,12 +113,25 @@ async def cmd_record(settings: Settings, args: argparse.Namespace) -> None:
             )
             markets = [sm.market for sm in scored[: args.discover_top]]
         else:
-            for slug in args.slug:
+            for slug in slugs:
                 m = await gamma.fetch_market_by_slug(slug)
                 if m is None:
                     console.print(f"[yellow]Skipping unknown slug '{slug}'[/]")
                 else:
                     markets.append(m)
+
+    # Resolution-horizon guard: drop markets that would resolve mid-run.
+    if args.min_days_to_resolution > 0:
+        markets, skipped = filter_min_days_to_resolution(
+            markets, args.min_days_to_resolution
+        )
+        for m in skipped:
+            d = m.days_to_resolution()
+            console.print(
+                f"[yellow]Skipping[/] (resolves in "
+                f"{('%.1f' % d) if d is not None else '?'}d "
+                f"< {args.min_days_to_resolution}d): {m.slug}"
+            )
 
     if not markets:
         console.print("[red]No markets selected to record.[/]")
@@ -116,7 +139,9 @@ async def cmd_record(settings: Settings, args: argparse.Namespace) -> None:
 
     console.print(f"[green]Recording {len(markets)} market(s). Ctrl-C to stop.[/]")
     for m in markets:
-        console.print(f"  - {m.question[:70]}  [dim]({m.slug})[/]")
+        d = m.days_to_resolution()
+        days = f"{d:.0f}d" if d is not None else "?"
+        console.print(f"  - {m.question[:64]}  [dim]({m.slug}) ~{days}[/]")
 
     recorder = Recorder(settings, markets)
     try:
@@ -228,6 +253,15 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--slug", action="append", default=[], help="Market slug (repeatable)")
     g.add_argument(
         "--discover-top", type=int, metavar="N", help="Record the top-N discovered markets"
+    )
+    g.add_argument(
+        "--basket", metavar="FILE",
+        help="Read slugs from a basket file (one slug per line; see baskets/)",
+    )
+    r.add_argument(
+        "--min-days-to-resolution", type=float, default=0.0, metavar="N",
+        help="Skip markets resolving in < N days (guards against mid-run staleness). "
+             "0 = no guard.",
     )
     r.set_defaults(func=cmd_record)
 

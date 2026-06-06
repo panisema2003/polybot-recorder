@@ -72,6 +72,27 @@ def match_themes(market: Market, themes: dict[str, list[str]]) -> list[str]:
     return _match_compiled(market.text_blob, compile_themes(themes))
 
 
+def filter_min_days_to_resolution(
+    markets: list[Market], min_days: float, now: datetime | None = None
+) -> tuple[list[Market], list[Market]]:
+    """Split markets into (keep, skip) by resolution horizon.
+
+    Guards against recording markets that resolve mid-run (their book goes dead
+    and you waste capture on a settled market). ``min_days <= 0`` disables the
+    guard and keeps everything. Markets with an unknown end date are kept only
+    when the guard is disabled.
+    """
+    if min_days <= 0:
+        return list(markets), []
+    now = now or datetime.now(timezone.utc)
+    keep: list[Market] = []
+    skip: list[Market] = []
+    for m in markets:
+        days = m.days_to_resolution(now)
+        (keep if days is not None and days >= min_days else skip).append(m)
+    return keep, skip
+
+
 def passes_filters(market: Market, f: Filters, now: datetime | None = None) -> bool:
     if f.require_order_book and not market.enable_order_book:
         return False

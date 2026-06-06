@@ -99,6 +99,32 @@ py scripts/analyze.py --slug SOME_SLUG --out reports
 
 ---
 
+## Using a curated basket instead of auto-discovery (recommended)
+
+`--discover-top 10` picks whatever ranks highest *at startup* — which can drift
+to short-dated markets that resolve mid-run. For a focused, reproducible run,
+point the recorder at a **version-controlled basket file** and add the
+resolution-horizon guard. Override the service non-interactively with a drop-in:
+
+```bash
+# get the latest code + basket files (editable install picks up changes on pull)
+sudo -u polybot bash -lc 'cd /opt/polybot/app && git pull'
+
+sudo mkdir -p /etc/systemd/system/polybot-recorder.service.d
+sudo tee /etc/systemd/system/polybot-recorder.service.d/basket.conf >/dev/null <<'EOF'
+[Service]
+ExecStart=
+ExecStart=/opt/polybot/app/.venv/bin/python -m polybot record --basket /opt/polybot/app/baskets/colombia-runoff-2026.txt --min-days-to-resolution 1
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart polybot-recorder
+```
+
+To change the basket later: edit the file in the repo, push, then on the box
+`git pull` + `systemctl restart polybot-recorder`. (`--min-days-to-resolution N`
+drops anything resolving within N days so you never record a market that dies
+mid-run.)
+
 ## Operations cheatsheet
 
 | Action | Command |

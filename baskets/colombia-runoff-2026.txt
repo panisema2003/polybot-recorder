@@ -1,0 +1,24 @@
+# Colombia 2026 presidential runoff — Cepeda vs. de la Espriella.
+# Runoff resolves 2026-06-21/22. One slug per line; # = comment.
+# Usage:
+#   polybot record --basket baskets/colombia-runoff-2026.txt --min-days-to-resolution 1
+#
+# Edge note: the two HEADLINE markets are tightly priced (efficiency benchmark).
+# The real slack / where local knowledge can pay is the MARGIN and TURNOUT
+# sub-markets below (wider spreads, lower attention).
+
+# --- Headline: who wins the runoff (benchmark) ---
+will-abelardo-de-la-espriella-win-the-2026-colombian-presidential-election
+will-ivan-cepeda-castro-win-the-2026-colombian-presidential-election
+
+# --- Margin of victory (the niche: wider spreads) ---
+will-abelardo-de-la-espriella-win-the-second-round-of-the-2026-colombian-presidential-election-by-0-5-20260605193429336
+will-abelardo-de-la-espriella-win-the-second-round-of-the-2026-colombian-presidential-election-by-5-10-20260605193429336
+will-abelardo-de-la-espriella-win-the-second-round-of-the-2026-colombian-presidential-election-by-10-15-20260605193429336
+will-abelardo-de-la-espriella-win-the-second-round-of-the-2026-colombian-presidential-election-by-15-20260605193429336
+will-ivan-cepeda-castro-win-the-second-round-of-the-2026-colombian-presidential-election-20260605193429336
+
+# --- Turnout (the niche: wider spreads) ---
+will-voter-turnout-be-56-60-in-the-second-round-of-the-2026-colombian-presidential-election-20260605193343335
+will-voter-turnout-be-60-64-in-the-second-round-of-the-2026-colombian-presidential-election-20260605193343335
+will-voter-turnout-be-at-least-64-in-the-second-round-of-the-2026-colombian-presidential-election-20260605193343335

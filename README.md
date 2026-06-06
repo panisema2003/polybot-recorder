@@ -45,6 +45,10 @@ polybot book new-rhianna-album-before-gta-vi-926
 # 3. Record order books to SQLite (Ctrl-C to stop)
 polybot record --slug some-market-slug --slug another-slug
 polybot record --discover-top 10        # auto-pick the top 10 niche markets
+polybot record --basket baskets/colombia-runoff-2026.txt   # curated, versioned list
+#    --min-days-to-resolution N  skips markets resolving in < N days, so a long
+#    run never ends up recording markets that settle (go dead) mid-run:
+polybot record --basket baskets/colombia-runoff-2026.txt --min-days-to-resolution 1
 
 # 4. Inspect what you've captured (needs the analysis extras)
 py scripts/analyze.py --list
@@ -120,7 +124,9 @@ src/polybot/
     engine.py      Backtester + BacktestResult (PnL, drawdown, summary)
     loader.py      load ticks / resolve slug+outcome -> asset id, from SQLite
     history.py     synthesise ticks from price history (assumed-spread mode)
+  basket.py        read version-controlled basket files (slug lists)
   cli.py           `polybot discover | book | record | backtest`
+baskets/           curated market lists for `record --basket` (in version control)
 scripts/
   analyze.py       pandas/matplotlib: list captures, plot mid+spread -> PNG
 deploy/
