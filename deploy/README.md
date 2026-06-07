@@ -125,6 +125,26 @@ To change the basket later: edit the file in the repo, push, then on the box
 drops anything resolving within N days so you never record a market that dies
 mid-run.)
 
+## Optional: the live dashboard
+
+A read-only web view of what the recorder is capturing (latest bid/ask/mid/
+spread, freshness, mid sparklines). **Don't expose it publicly** — bind it to
+localhost on the box and reach it via an SSH tunnel from your laptop.
+
+On the EC2 box:
+```bash
+sudo -u polybot bash -lc 'cd /opt/polybot/app && .venv/bin/pip install -e ".[dashboard]"'
+sudo -u polybot bash -lc 'cd /opt/polybot/app && nohup .venv/bin/python -m polybot dashboard --host 127.0.0.1 --port 8000 >/tmp/dash.log 2>&1 &'
+```
+From your laptop (keeps the dashboard private — no extra security-group port):
+```bash
+ssh -i your-key.pem -L 8000:localhost:8000 ubuntu@YOUR_ELASTIC_IP
+# then open http://localhost:8000 in your browser
+```
+
+(For a quick local look instead, just `scp` the DB down and run
+`polybot dashboard` on your laptop against `./data/polybot.db`.)
+
 ## Operations cheatsheet
 
 | Action | Command |

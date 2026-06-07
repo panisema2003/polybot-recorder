@@ -61,6 +61,12 @@ polybot backtest --slug some-market-slug --outcome Yes --fair 0.80 --resolve 1
 #    (b) price history = instant, no waiting, but spread is ASSUMED (optimistic):
 polybot backtest --slug some-market-slug --fair 0.80 --source history \
                  --assumed-spread 0.04 --resolve 1
+#    --report writes a self-contained HTML report (equity curve + trades):
+polybot backtest --slug some-market-slug --fair 0.80 --source history --report
+
+# 6. Live dashboard for the recorder (read-only). Needs the dashboard extra:
+#    pip install -e ".[dashboard]"
+polybot dashboard               # http://127.0.0.1:8000  (localhost only)
 ```
 
 ### Two backtest data sources
@@ -124,8 +130,12 @@ src/polybot/
     engine.py      Backtester + BacktestResult (PnL, drawdown, summary)
     loader.py      load ticks / resolve slug+outcome -> asset id, from SQLite
     history.py     synthesise ticks from price history (assumed-spread mode)
+    report.py      self-contained HTML backtest report (equity curve + trades)
+  dashboard/       read-only live web view of the recorder
+    data.py        SQLite queries (pure) · render.py  HTML + SVG sparklines (pure)
+    app.py         FastAPI wiring (lazy import; needs the [dashboard] extra)
   basket.py        read version-controlled basket files (slug lists)
-  cli.py           `polybot discover | book | record | backtest`
+  cli.py           `polybot discover | book | record | backtest | dashboard`
 baskets/           curated market lists for `record --basket` (in version control)
 scripts/
   analyze.py       pandas/matplotlib: list captures, plot mid+spread -> PNG

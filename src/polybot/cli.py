@@ -232,6 +232,47 @@ async def cmd_backtest(settings: Settings, args: argparse.Namespace) -> None:
             "for a resolved market to see true settled PnL."
         )
 
+    if args.report:
+        from polybot.backtest.report import write_report
+
+        meta = {
+            "asset_id": asset_id,
+            "source": args.source,
+            "fair": args.fair,
+            "edge": args.edge,
+            "question": getattr(args, "slug", None) or asset_id,
+        }
+        path = write_report(result, meta, args.report_dir)
+        console.print(f"[green]Report written:[/] {path}")
+
+
+async def cmd_dashboard(settings: Settings, args: argparse.Namespace) -> None:
+    try:
+        import uvicorn
+
+        from polybot.dashboard.app import create_app
+    except ImportError:
+        console.print(
+            "[red]Dashboard extras not installed.[/] Run: "
+            'pip install -e ".[dashboard]"'
+        )
+        return
+    if not settings.db_path.exists():
+        console.print(f"[yellow]No database at {settings.db_path} yet.[/]")
+    app = create_app(settings.db_path, refresh_s=args.refresh)
+    console.print(
+        f"[green]Dashboard on http://{args.host}:{args.port}[/]  "
+        f"(reading {settings.db_path})"
+    )
+    if args.host == "127.0.0.1":
+        console.print(
+            "[dim]Bound to localhost. On EC2, tunnel from your laptop:\n"
+            f"  ssh -i key.pem -L {args.port}:localhost:{args.port} ubuntu@HOST\n"
+            f"then open http://localhost:{args.port}[/]"
+        )
+    config = uvicorn.Config(app, host=args.host, port=args.port, log_level="warning")
+    await uvicorn.Server(config).serve()
+
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="polybot", description=__doc__)
@@ -292,7 +333,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="history: full bid-ask spread to assume around each price",
     )
     bt.add_argument("--depth", type=float, default=100_000.0, help="history: assumed depth")
+    bt.add_argument(
+        "--report", action="store_true",
+        help="Write a self-contained HTML report (equity curve + trades)",
+    )
+    bt.add_argument("--report-dir", default="reports", help="Where to write the report")
     bt.set_defaults(func=cmd_backtest)
+
+    dash = sub.add_parser("dashboard", help="Live web view of the recorder (read-only)")
+    dash.add_argument("--host", default="127.0.0.1", help="Bind host (default localhost)")
+    dash.add_argument("--port", type=int, default=8000, help="Bind port")
+    dash.add_argument("--refresh", type=int, default=15, help="Auto-refresh seconds")
+    dash.set_defaults(func=cmd_dashboard)
     return p
 
 
