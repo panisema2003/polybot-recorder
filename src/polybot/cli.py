@@ -252,9 +252,9 @@ async def cmd_dashboard(settings: Settings, args: argparse.Namespace) -> None:
 
         from polybot.dashboard.app import create_app
     except ImportError:
+        # Note: escape the [ so rich doesn't treat [dashboard] as a markup tag.
         console.print(
-            "[red]Dashboard extras not installed.[/] Run: "
-            'pip install -e ".[dashboard]"'
+            r'[red]Dashboard extras not installed.[/] Run: python -m pip install -e ".\[dashboard]"'
         )
         return
     if not settings.db_path.exists():
