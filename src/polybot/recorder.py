@@ -88,7 +88,21 @@ class Recorder:
             for tok in m.tokens:
                 self.state[tok.token_id] = _BookState(tok.token_id, m.condition_id)
         self.asset_ids = list(self.state.keys())
-        self._snap_counter: dict[str, int] = {a: 0 for a in self.asset_ids}
+        # Last full-depth snapshot time per asset (ms); 0 = never.
+        self._last_snap_ms: dict[str, int] = {a: 0 for a in self.asset_ids}
+
+    def _due_for_snapshot(self, asset_id: str) -> bool:
+        """True if it's time to persist a full-depth snapshot for this asset.
+
+        Top-of-book is recorded on every update; full snapshots (the whole book
+        as JSON) are throttled to snapshot_interval_s to keep the DB small.
+        """
+        now_ms = int(time.time() * 1000)
+        interval_ms = self.settings.recorder.snapshot_interval_s * 1000
+        if now_ms - self._last_snap_ms[asset_id] >= interval_ms:
+            self._last_snap_ms[asset_id] = now_ms
+            return True
+        return False
 
     async def _persist_top(self, asset_id: str, source: str) -> None:
         st = self.state.get(asset_id)
@@ -96,9 +110,7 @@ class Recorder:
             return
         book = st.to_orderbook()
         await asyncio.to_thread(self.storage.record_top, book, source)
-        # Keep a full-depth snapshot every ~20th top update per asset.
-        self._snap_counter[asset_id] += 1
-        if self._snap_counter[asset_id] % 20 == 0:
+        if self._due_for_snapshot(asset_id):
             await asyncio.to_thread(self.storage.record_snapshot, book, source)
 
     async def _handle_event(self, event: dict) -> None:
@@ -151,7 +163,8 @@ class Recorder:
             for asset_id, book in books.items():
                 self.state[asset_id].replace_from(book)
                 await asyncio.to_thread(self.storage.record_top, book, "rest")
-                await asyncio.to_thread(self.storage.record_snapshot, book, "rest")
+                if self._due_for_snapshot(asset_id):
+                    await asyncio.to_thread(self.storage.record_snapshot, book, "rest")
             log.info("REST refresh: %d/%d books", len(books), len(self.asset_ids))
             await asyncio.sleep(interval)
 

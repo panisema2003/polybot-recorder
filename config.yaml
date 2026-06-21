@@ -60,8 +60,12 @@ discovery:
     crypto_micro: ["fdv", "airdrop", "token launch", "listing", "mainnet"]
 
 recorder:
-  # Periodic REST snapshot interval (belt-and-suspenders vs the WS stream).
+  # How often the REST loop polls the books (belt-and-suspenders vs the WS stream).
   rest_snapshot_interval_s: 30
+  # How often to persist a FULL-DEPTH snapshot per asset (whole book as JSON).
+  # Top-of-book is always recorded; full snapshots are big, so throttle them.
+  # 600s (10 min) keeps the DB ~20x smaller than the old every-30s behaviour.
+  snapshot_interval_s: 600
   # Send an app-level keepalive on the WS this often.
   ws_ping_interval_s: 10
   # Reconnect backoff (seconds): min, max.

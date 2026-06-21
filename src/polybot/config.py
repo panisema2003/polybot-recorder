@@ -46,9 +46,13 @@ class DiscoveryConfig:
 
 @dataclass(frozen=True)
 class RecorderConfig:
-    rest_snapshot_interval_s: int
+    rest_snapshot_interval_s: int          # how often the REST loop polls books
     ws_ping_interval_s: int
     reconnect_backoff_s: tuple[float, float]
+    # How often to persist a FULL-DEPTH snapshot per asset. Top-of-book is
+    # always recorded; full snapshots are large (whole book as JSON) so they
+    # are throttled to avoid ballooning the DB on long runs.
+    snapshot_interval_s: int = 600
 
 
 @dataclass(frozen=True)
@@ -84,6 +88,8 @@ class Settings:
             rest_snapshot_interval_s=rec_raw["rest_snapshot_interval_s"],
             ws_ping_interval_s=rec_raw["ws_ping_interval_s"],
             reconnect_backoff_s=tuple(rec_raw["reconnect_backoff_s"]),  # type: ignore[arg-type]
+            # Default keeps older config.yaml files working without edits.
+            snapshot_interval_s=rec_raw.get("snapshot_interval_s", 600),
         )
 
         db_path = Path(os.getenv("POLYBOT_DB") or raw["storage"]["db_path"])
